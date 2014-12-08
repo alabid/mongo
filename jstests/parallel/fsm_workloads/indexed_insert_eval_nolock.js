@@ -15,7 +15,7 @@ var $config = extendWorkload($config, function($config, $super) {
     $config.data.nolock = true;
 
     // scale up the number of iterations since we're not holding the global lock
-    $config.iterations = 100;
+    $config.iterations = 50;
 
     return $config;
 });

@@ -10,34 +10,13 @@
  */
 var $config = (function() {
 
-    // explicitly pass db to avoid accidentally using the global `db`
-    function assertResult(db, res) {
-        assertAlways.eq(0, res.nUpserted, tojson(res));
-        assertWhenOwnColl.eq(1, res.nMatched, tojson(res));
-        if (db.getMongo().writeMode() === 'commands') {
-            assertWhenOwnColl.contains(res.nModified, [0, 1], tojson(res));
-        }
-    }
-
-    function setOrUnset(db, collName, set, numDocs) {
-        // choose a doc and value to use in the update
-        var docIndex = Random.randInt(numDocs);
-        var value = Random.randInt(5);
-
-        var updater = {};
-        updater[set ? '$set' : '$unset'] = { value: value };
-
-        var res = db[collName].update({ _id: docIndex }, updater);
-        assertResult(db, res);
-    }
-
     var states = {
         set: function set(db, collName) {
-            setOrUnset(db, collName, true, this.numDocs);
+            this.setOrUnset(db, collName, true, this.numDocs);
         },
 
         unset: function unset(db, collName) {
-            setOrUnset(db, collName, false, this.numDocs);
+            this.setOrUnset(db, collName, false, this.numDocs);
         }
     };
 
@@ -72,6 +51,32 @@ var $config = (function() {
         states: states,
         transitions: transitions,
         data: {
+            // explicitly pass db to avoid accidentally using the global `db`
+            assertResult: function assertResult(db, res) {
+                assertAlways.eq(0, res.nUpserted, tojson(res));
+                assertWhenOwnColl.eq(1, res.nMatched, tojson(res));
+                if (db.getMongo().writeMode() === 'commands') {
+                    assertWhenOwnColl.contains(res.nModified, [0, 1], tojson(res));
+                }
+            },
+
+            setOrUnset: function setOrUnset(db, collName, set, numDocs) {
+                // choose a doc and value to use in the update
+                var docIndex = Random.randInt(numDocs);
+                var value = Random.randInt(5);
+
+                var updater = {};
+                updater[set ? '$set' : '$unset'] = { value: value };
+
+                var query = { _id: docIndex };
+                var res = this.doUpdate(db, collName, query, updater);
+                this.assertResult(db, res);
+            },
+
+            doUpdate: function doUpdate(db, collName, query, updater) {
+                return db[collName].update(query, updater);
+            },
+
             // numDocs should be much less than threadCount, to make more threads use the same docs
             numDocs: Math.floor(threadCount / 10)
         },

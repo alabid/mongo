@@ -10,16 +10,22 @@ var $config = (function() {
     var states = {
         remove: function remove(db, collName) {
             // try removing a random document
-            var res = db[collName].remove({ rand: { $gte: Random.rand() } }, { justOne: true });
+            var res = this.doRemove(db,
+                                    collName,
+                                    { rand: { $gte: Random.rand() } },
+                                    { justOne: true });
             assertAlways.lte(res.nRemoved, 1);
             if (res.nRemoved === 0) {
-                // if that fails, try removing an arbitrary document
-                res = db[collName].remove({}, { justOne: true });
+                // The above remove() can fail to remove a document when the random value
+                // in the query is greater than any of the random values in the collection.
+                // When that situation occurs, just remove an arbitrary document instead.
+                res = this.doRemove(db,
+                                    collName,
+                                    {},
+                                    { justOne: true });
                 assertAlways.lte(res.nRemoved, 1);
             }
-            // when running on its own collection, this iteration should remove exactly one document
-            assertWhenOwnColl.writeOK(res);
-            assertWhenOwnColl.eq(1, res.nRemoved);
+            this.assertResult(res);
         }
     };
 
@@ -45,6 +51,17 @@ var $config = (function() {
         states: states,
         transitions: transitions,
         setup: setup,
+        data: {
+            doRemove: function doRemove(db, collName, query, options) {
+                return db[collName].remove(query, options);
+            },
+            assertResult: function assertResult(res) {
+                assertAlways.writeOK(res);
+                // when running on its own collection,
+                // this iteration should remove exactly one document
+                assertWhenOwnColl.eq(1, res.nRemoved, tojson(res));
+            }
+        },
         startState: 'remove'
     };
 

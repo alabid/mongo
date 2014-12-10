@@ -27,17 +27,19 @@ function makeCapped($config, $super) {
         $super.setup.apply(this, arguments);
     };
 
-    $config.states.find = function find(db, collName) {
-        var oldAssertLevel = globalAssertLevel;
-        try {
-            // Temporarily weaken the global assertion level to avoid spurious
-            // failures due to collection truncation
-            globalAssertLevel = AssertLevel.ALWAYS;
-            $super.states.find.apply(this, arguments);
-        } finally {
-            globalAssertLevel = oldAssertLevel;
-        }
-    };
+    if ($super.states.find) {
+        $config.states.find = function find(db, collName) {
+            var oldAssertLevel = globalAssertLevel;
+            try {
+                // Temporarily weaken the global assertion level to avoid spurious
+                // failures due to collection truncation
+                globalAssertLevel = AssertLevel.ALWAYS;
+                $super.states.find.apply(this, arguments);
+            } finally {
+                globalAssertLevel = oldAssertLevel;
+            }
+        };
+    }
 
     return $config;
 }

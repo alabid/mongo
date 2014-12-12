@@ -23,7 +23,7 @@ var $config = (function() {
                 cache[size] = new Array(size + 1).join('x');
             }
             return cache[size];
-        }
+        };
     })();
 
     function padDoc(doc, size) {

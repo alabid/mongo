@@ -9,6 +9,7 @@ var blacklist = [
     // Disabled due to known bugs
     'agg_match.js', // SERVER-3645 .count() can be wrong on sharded collections
     'drop_database.js', // SERVER-16285
+    'indexed_insert_base_capped.js', // SERVER-16368
     'map_reduce_merge_nonatomic.js', // SERVER-16262
     'map_reduce_reduce_nonatomic.js', // SERVER-16262
 

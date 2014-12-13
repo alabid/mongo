@@ -24,6 +24,7 @@ var blacklist = [
     'indexed_insert_eval.js', // eval doesn't work with sharded collections
     'indexed_insert_eval_nolock.js', // eval doesn't work with sharded collections
     'remove_single_document.js', // our .remove(query, {justOne: true}) calls lack shard keys
+    'update_upsert_multi.js', // our update queries lack shard keys
 
 ].map(function(file) { return dir + '/' + file; });
 

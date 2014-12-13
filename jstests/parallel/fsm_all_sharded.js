@@ -15,6 +15,12 @@ var blacklist = [
     // Disabled due to MongoDB restrictions and/or workload restrictions
     'agg_group_external.js', // uses >100MB of data, and is flaky
     'agg_sort_external.js', // uses >100MB of data, and is flaky
+    'findAndModify_remove.js', // our findAndModify queries lack shard keys
+    'findAndModify_update.js', // our findAndModify queries lack shard keys
+    'findAndModify_update_collscan.js', // our findAndModify queries lack shard keys
+    'findAndModify_update_grow.js', // our findAndModify queries lack shard keys
+    'findAndModify_upsert.js', // our findAndModify queries lack shard keys
+    'findAndModify_upsert_collscan.js', // our findAndModify queries lack shard keys
     'indexed_insert_eval.js', // eval doesn't work with sharded collections
     'indexed_insert_eval_nolock.js', // eval doesn't work with sharded collections
     'remove_single_document.js', // our .remove(query, {justOne: true}) calls lack shard keys

@@ -18,6 +18,8 @@ var blacklist = [
     'findAndModify_update_grow.js', // our findAndModify queries lack shard keys
     'findAndModify_upsert.js', // our findAndModify queries lack shard keys
     'findAndModify_upsert_collscan.js', // our findAndModify queries lack shard keys
+    'group.js', // the group command cannot be issued against a sharded cluster
+    'group_cond.js', // the group command cannot be issued against a sharded cluster
     'indexed_insert_eval.js', // eval doesn't work with sharded collections
     'indexed_insert_eval_nolock.js', // eval doesn't work with sharded collections
     'remove_single_document.js', // our .remove(query, {justOne: true}) calls lack shard keys

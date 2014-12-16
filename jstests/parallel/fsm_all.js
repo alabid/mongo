@@ -8,7 +8,6 @@ var blacklist = [
     // Disabled due to known bugs
 ].map(function(file) { return dir + '/' + file; });
 
-// SERVER-16196 re-enable executing workloads
-// runWorkloadsSerially(ls(dir).filter(function(file) {
-//     return !Array.contains(blacklist, file);
-// }));
+runWorkloadsSerially(ls(dir).filter(function(file) {
+    return !Array.contains(blacklist, file);
+}));

@@ -40,8 +40,8 @@ function dropRoles(db, pattern) {
     assert(pattern instanceof RegExp, 'expected pattern to be a regular expression');
 
     db.getRoles().forEach(function(roleInfo) {
-        if (pattern.test(roleInfo.name)) {
-            assertAlways(db.dropRole(roleInfo.name));
+        if (pattern.test(roleInfo.role)) {
+            assertAlways(db.dropRole(roleInfo.role));
         }
     });
 }
@@ -50,8 +50,8 @@ function dropUsers(db, pattern) {
     assert(pattern instanceof RegExp, 'expected pattern to be a regular expression');
 
     db.getUsers().forEach(function(userInfo) {
-        if (pattern.test(userInfo.name)) {
-            assertAlways(db.dropUser(userInfo.name));
+        if (pattern.test(userInfo.user)) {
+            assertAlways(db.dropUser(userInfo.user));
         }
     });
 }

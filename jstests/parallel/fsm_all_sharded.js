@@ -5,11 +5,22 @@ load('jstests/parallel/fsm_libs/runner.js');
 var dir = 'jstests/parallel/fsm_workloads';
 
 var blacklist = [
-
     // Disabled due to known bugs
     'agg_match.js', // SERVER-3645 .count() can be wrong on sharded collections
 
     // Disabled due to MongoDB restrictions and/or workload restrictions
+
+    // These workloads sometimes trigger 'Could not lock auth data update lock'
+    // errors because the AuthorizationManager currently waits for only five
+    // seconds to acquire the lock for authorization documents
+    'auth_create_role.js',
+    'auth_create_user.js',
+
+    // These workloads are disabled because of recent changes in capped
+    // collection behavior with wiredTiger (see: SERVER-16235)
+    'create_capped_collection.js',
+    'create_capped_collection_maxdocs.js',
+
     'agg_group_external.js', // uses >100MB of data, and is flaky
     'agg_sort_external.js', // uses >100MB of data, and is flaky
     'findAndModify_remove.js', // our findAndModify queries lack shard keys
@@ -24,7 +35,6 @@ var blacklist = [
     'indexed_insert_eval_nolock.js', // eval doesn't work with sharded collections
     'remove_single_document.js', // our .remove(query, {justOne: true}) calls lack shard keys
     'update_upsert_multi.js', // our update queries lack shard keys
-
 ].map(function(file) { return dir + '/' + file; });
 
 // SERVER-16196 re-enable executing workloads against sharded clusters

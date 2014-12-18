@@ -346,6 +346,7 @@ var runner = (function() {
                 var cleanup = [];
                 var errors = [];
                 var teardownFailed = false;
+                var startTime, endTime, totalTime;
 
                 jsTest.log(workloads.join('\n'));
 
@@ -357,12 +358,14 @@ var runner = (function() {
                         cleanup.push(workload);
                     });
 
+                    startTime = new Date();
                     threadMgr.init(workloads, context, maxAllowedConnections);
                     threadMgr.spawnAll(cluster.getHost(), executionOptions);
                     threadMgr.checkFailed(0.2);
 
                     errors = threadMgr.joinAll();
                 } finally {
+                    endTime = new Date();
                     cleanup.forEach(function(workload) {
                         try {
                             teardownWorkload(workload, context);
@@ -371,6 +374,12 @@ var runner = (function() {
                             teardownFailed = true;
                         }
                     });
+
+                    totalTime = endTime.getTime() - startTime.getTime();
+                    assert.gte(totalTime, 0);
+                    if (!executionMode.parallel && !executionMode.composed) {
+                        jsTest.log(workloads[0] + ': Workload completed in ' + totalTime + ' ms');
+                    }
                 }
 
                 // Only drop the collections/databases if all the workloads ran successfully

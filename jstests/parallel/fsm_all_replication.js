@@ -1,9 +1,11 @@
+'use strict';
+
 load('jstests/parallel/fsm_libs/runner.js');
 
 var dir = 'jstests/parallel/fsm_workloads';
 
 var blacklist = [
-    'indexed_insert_multikey.js' // SERVER-16143
+    // Disabled due to known bugs
 ].map(function(file) { return dir + '/' + file; });
 
 // SERVER-16196 re-enable executing workloads against replica sets

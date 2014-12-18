@@ -10,6 +10,7 @@ var $config = (function() {
     var states = {
         init: function init(db, collName) {
             // noop
+            // other workloads that extend this workload use this method
         },
 
         insert: function insert(db, collName) {

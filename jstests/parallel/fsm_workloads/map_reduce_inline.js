@@ -49,6 +49,7 @@ var $config = (function() {
 
         function init(db, collName) {
             // no-op
+            // other workloads that extend this workload use this method
         }
 
         function mapReduce(db, collName) {

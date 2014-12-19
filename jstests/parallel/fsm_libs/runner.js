@@ -89,7 +89,7 @@ var runner = (function() {
      */
     function scheduleWorkloads(workloads, executionMode, executionOptions) {
         if (!executionMode.composed && !executionMode.parallel) { // serial execution
-            return workloads.map(function(workload) {
+            return Array.shuffle(workloads).map(function(workload) {
                 return [workload]; // run each workload by itself
             });
         }

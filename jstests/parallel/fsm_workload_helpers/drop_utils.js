@@ -8,10 +8,9 @@
 function dropCollections(db, pattern) {
     assert(pattern instanceof RegExp, 'expected pattern to be a regular expression');
 
-    var res = db.runCommand('listCollections', { filter: { name: pattern } });
-    assertAlways.commandWorked(res);
-
-    res.collections.forEach(function(collInfo) {
+    db.getCollectionInfos().filter(function(collInfo) {
+        return pattern.test(collInfo.name);
+    }).forEach(function(collInfo) {
         assertAlways(db[collInfo.name].drop());
     });
 }

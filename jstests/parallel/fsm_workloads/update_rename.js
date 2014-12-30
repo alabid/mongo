@@ -10,7 +10,7 @@ var $config = (function() {
     var fieldNames = ['update_rename_x', 'update_rename_y', 'update_rename_z'];
 
     function choose(array) {
-        assert.gt(array.length, 0, "can't choose an element of an empty array");
+        assertAlways.gt(array.length, 0, "can't choose an element of an empty array");
         return array[Random.randInt(array.length)];
     }
 

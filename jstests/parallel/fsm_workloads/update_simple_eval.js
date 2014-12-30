@@ -22,7 +22,7 @@ var $config = extendWorkload($config, function($config, $super) {
             args: [$super.data.doUpdate, collName, query, updater],
             nolock: this.nolock
         });
-        assert.commandWorked(evalResult);
+        assertAlways.commandWorked(evalResult);
         var res = JSON.parse(evalResult.retval);
         return res;
     };

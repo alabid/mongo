@@ -15,6 +15,7 @@ var blacklist = [
     // seconds to acquire the lock for authorization documents
     'auth_create_role.js',
     'auth_create_user.js',
+    'auth_drop_role.js',
 
     // These workloads are disabled because of recent changes in capped
     // collection behavior with wiredTiger (see: SERVER-16235)

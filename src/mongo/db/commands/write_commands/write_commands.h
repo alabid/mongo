@@ -30,8 +30,8 @@
 
 #include <string>
 
-#include "mongo/db/commands.h"
 #include "mongo/db/client_basic.h"
+#include "mongo/db/commands/command_with_write_concern.h"
 #include "mongo/s/write_ops/batched_command_request.h"
 
 namespace mongo {
@@ -39,12 +39,12 @@ namespace mongo {
     /**
      * Base class for write commands.  Write commands support batch writes and write concern,
      * and return per-item error information.  All write commands use the (non-virtual) entry
-     * point WriteCmd::run().
+     * point WriteCmd::runWithWC().
      *
      * Command parsing is performed by the WriteBatch class (command syntax documented there),
      * and command execution is performed by the WriteBatchExecutor class.
      */
-    class WriteCmd : public Command {
+    class WriteCmd : public CommandWithWriteConcern {
         MONGO_DISALLOW_COPYING(WriteCmd);
     public:
         virtual ~WriteCmd() {}
@@ -61,7 +61,6 @@ namespace mongo {
         static void redactTooLongLog( mutablebson::Document* cmdObj, StringData fieldName );
 
     private:
-        virtual bool slaveOk() const;
 
         virtual bool isWriteCommandForConfigServer() const;
 
@@ -72,13 +71,14 @@ namespace mongo {
         virtual bool shouldAffectCommandCounter() const;
 
         // Write command entry point.
-        virtual bool run(
+        virtual bool runWithWC(
                  OperationContext* txn,
                  const std::string& dbname,
                  BSONObj& cmdObj,
                  int options,
                  std::string& errmsg,
                  BSONObjBuilder& result,
+                 const WriteConcernOptions& writeConcern,
                  bool fromRepl);
 
         // Write commands can be explained.

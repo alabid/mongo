@@ -29,12 +29,12 @@
 #pragma once
 
 #include "mongo/db/write_concern_options.h"
-#include "mongo/util/net/hostandport.h"
 
 namespace mongo {
 
     class OperationContext;
     template <typename T> class StatusWith;
+    struct WriteConcernResult;
 
     /**
      * If "writeConcern" indicates a durable commit level,
@@ -56,31 +56,6 @@ namespace mongo {
      * Verifies that a WriteConcern is valid for this particular host.
      */
     Status validateWriteConcern( const WriteConcernOptions& writeConcern );
-
-    struct WriteConcernResult {
-        WriteConcernResult() {
-            reset();
-        }
-
-        void reset() {
-            syncMillis = -1;
-            fsyncFiles = -1;
-            wTimedOut = false;
-            wTime = -1;
-            err = "";
-        }
-
-        void appendTo( const WriteConcernOptions& writeConcern, BSONObjBuilder* result ) const;
-
-        int syncMillis;
-        int fsyncFiles;
-
-        bool wTimedOut;
-        int wTime;
-        std::vector<HostAndPort> writtenTo;
-
-        std::string err; // this is the old err field, should deprecate
-    };
 
     /**
      * Blocks until the database is sure the specified user write concern has been fulfilled, or

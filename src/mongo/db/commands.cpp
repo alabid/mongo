@@ -262,11 +262,16 @@ namespace mongo {
         }
     }
 
-    void Command::appendCommandWCStatus(BSONObjBuilder& result, const Status& status) {
+    void Command::appendCommandWCStatus(BSONObjBuilder& result,
+                                        const Status& status,
+                                        const WriteConcernResult& wcResult) {
         if (!status.isOK()) {
             WCErrorDetail wcError;
             wcError.setErrCode(status.code());
             wcError.setErrMessage(status.reason());
+            if (wcResult.wTimedOut) {
+                wcError.setErrInfo(BSON("wtimeout" << true));
+            }
             result.append("writeConcernError", wcError.toBSON());
         }
     }

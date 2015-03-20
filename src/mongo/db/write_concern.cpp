@@ -40,6 +40,7 @@
 #include "mongo/db/stats/timer_stats.h"
 #include "mongo/db/storage/storage_engine.h"
 #include "mongo/db/write_concern_options.h"
+#include "mongo/db/write_concern_result.h"
 
 namespace mongo {
 
@@ -68,15 +69,26 @@ namespace mongo {
                                                 Object,
                                                 &writeConcernElement);
 
+        // The default write concern if empty is w : 1
+        // Specifying w : 0 is/was allowed, but is interpreted identically to w : 1
+        WriteConcernOptions writeConcern =
+            repl::getGlobalReplicationCoordinator()->getGetLastErrorDefault();
+        if (writeConcern.wNumNodes == 0 && writeConcern.wMode.empty()) {
+            writeConcern.wNumNodes = 1;
+        }
+
         if (!wcStatus.isOK()) {
             if (wcStatus == ErrorCodes::NoSuchKey) {
-                return repl::getGlobalReplicationCoordinator()->getGetLastErrorDefault();
+                return writeConcern;
             }
             return wcStatus;
         }
 
-        WriteConcernOptions writeConcern;
-        wcStatus = writeConcern.parse(writeConcernElement.Obj());
+        BSONObj wcObj = writeConcernElement.Obj();
+        if (wcObj.isEmpty()) {
+            return writeConcern;
+        }
+        wcStatus = writeConcern.parse(wcObj);
 
         if (wcStatus.isOK()) {
             wcStatus = validateWriteConcern(writeConcern);
@@ -122,57 +134,6 @@ namespace mongo {
         }
 
         return Status::OK();
-    }
-
-    void WriteConcernResult::appendTo( const WriteConcernOptions& writeConcern,
-                                       BSONObjBuilder* result ) const {
-
-        if ( syncMillis >= 0 )
-            result->appendNumber( "syncMillis", syncMillis );
-
-        if ( fsyncFiles >= 0 )
-            result->appendNumber( "fsyncFiles", fsyncFiles );
-
-        if ( wTime >= 0 ) {
-            if ( wTimedOut )
-                result->appendNumber( "waited", wTime );
-            else
-                result->appendNumber( "wtime", wTime );
-        }
-
-        if ( wTimedOut )
-            result->appendBool( "wtimeout", true );
-
-        if (writtenTo.size()) {
-            BSONArrayBuilder hosts(result->subarrayStart("writtenTo"));
-            for (size_t i = 0; i < writtenTo.size(); ++i) {
-                hosts.append(writtenTo[i].toString());
-            }
-        }
-        else {
-            result->appendNull( "writtenTo" );
-        }
-
-        if ( err.empty() )
-            result->appendNull( "err" );
-        else
-            result->append( "err", err );
-
-        // *** 2.4 SyncClusterConnection compatibility ***
-        // 2.4 expects either fsync'd files, or a "waited" field exist after running an fsync : true
-        // GLE, but with journaling we don't actually need to run the fsync (fsync command is
-        // preferred in 2.6).  So we add a "waited" field if one doesn't exist.
-
-        if ( writeConcern.syncMode == WriteConcernOptions::FSYNC ) {
-
-            if ( fsyncFiles < 0 && ( wTime < 0 || !wTimedOut ) ) {
-                dassert( result->asTempObj()["waited"].eoo() );
-                result->appendNumber( "waited", syncMillis );
-            }
-
-            dassert( result->asTempObj()["fsyncFiles"].numberInt() > 0 ||
-                     !result->asTempObj()["waited"].eoo() );
-        }
     }
 
     Status waitForWriteConcern( OperationContext* txn,

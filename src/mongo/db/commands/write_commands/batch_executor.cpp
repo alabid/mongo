@@ -69,7 +69,6 @@
 #include "mongo/s/d_state.h"
 #include "mongo/s/shard_key_pattern.h"
 #include "mongo/s/write_ops/batched_upsert_detail.h"
-#include "mongo/s/write_ops/write_error_detail.h"
 #include "mongo/util/elapsed_tracker.h"
 #include "mongo/util/log.h"
 #include "mongo/util/mongoutils/str.h"
@@ -111,27 +110,12 @@ namespace mongo {
     using mongoutils::str::stream;
 
     WriteBatchExecutor::WriteBatchExecutor( OperationContext* txn,
-                                            const WriteConcernOptions& wc,
                                             OpCounters* opCounters,
                                             LastError* le ) :
         _txn(txn),
-        _defaultWriteConcern( wc ),
         _opCounters( opCounters ),
         _le( le ),
         _stats( new WriteBatchStats ) {
-    }
-
-    static WCErrorDetail* toWriteConcernError( const Status& wcStatus,
-                                               const WriteConcernResult& wcResult ) {
-
-        WCErrorDetail* wcError = new WCErrorDetail;
-
-        wcError->setErrCode( wcStatus.code() );
-        wcError->setErrMessage( wcStatus.reason() );
-        if ( wcResult.wTimedOut )
-            wcError->setErrInfo( BSON( "wtimeout" << true ) );
-
-        return wcError;
     }
 
     static WriteErrorDetail* toWriteError( const Status& status ) {
@@ -188,45 +172,13 @@ namespace mongo {
     }
 
     void WriteBatchExecutor::executeBatch( const BatchedCommandRequest& request,
-                                           BatchedCommandResponse* response ) {
+                                           BatchedCommandResponse* response,
+                                           const WriteConcernOptions& writeConcern) {
 
         // Validate namespace
         Status isValid = validateBatch(request);
         if (!isValid.isOK()) {
             toBatchError( isValid, response );
-            return;
-        }
-
-        // Validate write concern
-        // TODO: Lift write concern parsing out of this entirely
-        WriteConcernOptions writeConcern;
-
-        BSONObj wcDoc;
-        if ( request.isWriteConcernSet() ) {
-            wcDoc = request.getWriteConcern();
-        }
-
-        Status wcStatus = Status::OK();
-        if ( wcDoc.isEmpty() ) {
-
-            // The default write concern if empty is w : 1
-            // Specifying w : 0 is/was allowed, but is interpreted identically to w : 1
-            writeConcern = _defaultWriteConcern;
-
-            if ( writeConcern.wNumNodes == 0 && writeConcern.wMode.empty() ) {
-                writeConcern.wNumNodes = 1;
-            }
-        }
-        else {
-            wcStatus = writeConcern.parse( wcDoc );
-        }
-
-        if ( wcStatus.isOK() ) {
-            wcStatus = validateWriteConcern( writeConcern );
-        }
-
-        if ( !wcStatus.isOK() ) {
-            toBatchError( wcStatus, response );
             return;
         }
 
@@ -267,28 +219,6 @@ namespace mongo {
         //
 
         bulkExecute( request, writeConcern, &upserted, &writeErrors );
-
-        //
-        // Try to enforce the write concern if everything succeeded (unordered or ordered)
-        // OR if something succeeded and we're unordered.
-        //
-
-        auto_ptr<WCErrorDetail> wcError;
-        bool needToEnforceWC = writeErrors.empty()
-                               || ( !request.getOrdered()
-                                    && writeErrors.size() < request.sizeWriteOps() );
-
-        if ( needToEnforceWC ) {
-
-            _txn->getCurOp()->setMessage( "waiting for write concern" );
-
-            WriteConcernResult res;
-            Status status = waitForWriteConcern( _txn, writeConcern, _txn->getClient()->getLastOp(), &res );
-
-            if ( !status.isOK() ) {
-                wcError.reset( toWriteConcernError( status, res ) );
-            }
-        }
 
         //
         // Refresh metadata if needed
@@ -373,10 +303,6 @@ namespace mongo {
 
             if ( writeErrors.size() ) {
                 response->setErrDetails( writeErrors );
-            }
-
-            if ( wcError.get() ) {
-                response->setWriteConcernError( wcError.release() );
             }
 
             repl::ReplicationCoordinator* replCoord = repl::getGlobalReplicationCoordinator();

@@ -62,7 +62,6 @@ namespace mongo {
         class ExecInsertsState;
 
         WriteBatchExecutor( OperationContext* txn,
-                            const WriteConcernOptions& defaultWriteConcern,
                             OpCounters* opCounters,
                             LastError* le );
 
@@ -70,7 +69,9 @@ namespace mongo {
          * Issues writes with requested write concern.  Fills response with errors if problems
          * occur.
          */
-        void executeBatch( const BatchedCommandRequest& request, BatchedCommandResponse* response );
+        void executeBatch(const BatchedCommandRequest& request,
+                          BatchedCommandResponse* response,
+                          const WriteConcernOptions& writeConcern);
 
         const WriteBatchStats& getStats() const;
 
@@ -144,9 +145,6 @@ namespace mongo {
                             CurOp* currentOp );
 
         OperationContext* _txn;
-
-        // Default write concern, if one isn't provide in the batches.
-        const WriteConcernOptions _defaultWriteConcern;
 
         // OpCounters object to update - needed for stats reporting
         // Not owned here.

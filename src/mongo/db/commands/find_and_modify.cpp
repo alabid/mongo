@@ -34,7 +34,7 @@
 
 #include <boost/scoped_ptr.hpp>
 
-#include "mongo/db/commands.h"
+#include "mongo/db/commands/command_with_write_concern.h"
 #include "mongo/db/concurrency/write_conflict_exception.h"
 #include "mongo/db/dbhelpers.h"
 #include "mongo/db/exec/update.h"
@@ -47,7 +47,6 @@
 #include "mongo/db/ops/update_lifecycle_impl.h"
 #include "mongo/db/query/get_executor.h"
 #include "mongo/db/repl/replication_coordinator_global.h"
-#include "mongo/db/write_concern.h"
 #include "mongo/util/log.h"
 
 namespace mongo {
@@ -58,7 +57,7 @@ namespace mongo {
     using std::stringstream;
 
     /* Find and Modify an object returning either the old (default) or new value*/
-    class CmdFindAndModify : public Command {
+    class CmdFindAndModify : public CommandWithWriteConcern {
     public:
         virtual void help( stringstream &help ) const {
             help <<
@@ -68,8 +67,7 @@ namespace mongo {
                  "Output is in the \"value\" field\n";
         }
 
-        CmdFindAndModify() : Command("findAndModify", false, "findandmodify") { }
-        virtual bool slaveOk() const { return false; }
+        CmdFindAndModify() : CommandWithWriteConcern("findAndModify", false, "findandmodify") { }
         virtual bool isWriteCommandForConfigServer() const { return true; }
         virtual void addRequiredPrivileges(const std::string& dbname,
                                            const BSONObj& cmdObj,
@@ -77,13 +75,14 @@ namespace mongo {
             find_and_modify::addPrivilegesRequiredForFindAndModify(this, dbname, cmdObj, out);
         }
 
-        virtual bool run(OperationContext* txn,
-                         const string& dbname,
-                         BSONObj& cmdObj,
-                         int options,
-                         string& errmsg,
-                         BSONObjBuilder& result,
-                         bool fromRepl) {
+        virtual bool runWithWC(OperationContext* txn,
+                               const string& dbname,
+                               BSONObj& cmdObj,
+                               int options,
+                               string& errmsg,
+                               BSONObjBuilder& result,
+                               const WriteConcernOptions& writeConcern,
+                               bool fromRepl) {
 
             const std::string ns = parseNsCollectionRequired(dbname, cmdObj);
 
@@ -115,11 +114,7 @@ namespace mongo {
                 return false;
             }
 
-            StatusWith<WriteConcernOptions> wcResult = extractWriteConcern(cmdObj);
-            if (!wcResult.isOK()) {
-                return appendCommandStatus(result, wcResult.getStatus());
-            }
-            setupSynchronousCommit(wcResult.getValue(), txn);
+            setupSynchronousCommit(writeConcern, txn);
 
             bool ok = false;
             MONGO_WRITE_CONFLICT_RETRY_LOOP_BEGIN {
@@ -181,13 +176,6 @@ namespace mongo {
                              result,
                              errmsg);
             }
-
-            WriteConcernResult res;
-            wcResult = waitForWriteConcern(txn,
-                                           wcResult.getValue(),
-                                           txn->getClient()->getLastOp(),
-                                           &res);
-            appendCommandWCStatus(result, wcResult.getStatus());
 
             return ok;
         }

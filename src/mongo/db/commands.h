@@ -40,6 +40,7 @@
 #include "mongo/db/commands/server_status_metric.h"
 #include "mongo/db/jsobj.h"
 #include "mongo/db/query/explain.h"
+#include "mongo/db/write_concern_result.h"
 #include "mongo/util/string_map.h"
 
 namespace mongo {
@@ -319,7 +320,9 @@ namespace mutablebson {
          * Helper for setting a writeConcernError field in the command result object if
          * a writeConcern error occurs.
          */
-        static void appendCommandWCStatus(BSONObjBuilder& result, const Status& status);
+        static void appendCommandWCStatus(BSONObjBuilder& result,
+                                          const Status& status,
+                                          const WriteConcernResult& wcResult);
 
         // Set by command line.  Controls whether or not testing-only commands should be available.
         static int testCommandsEnabled;

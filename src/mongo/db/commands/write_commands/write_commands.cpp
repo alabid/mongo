@@ -67,7 +67,7 @@ namespace mongo {
     } // namespace
 
     WriteCmd::WriteCmd( StringData name, BatchedCommandRequest::BatchType writeType ) :
-        Command( name ), _writeType( writeType ) {
+        CommandWithWriteConcern(name), _writeType(writeType) {
     }
 
     void WriteCmd::redactTooLongLog( mutablebson::Document* cmdObj, StringData fieldName ) {
@@ -85,9 +85,6 @@ namespace mongo {
             field.setValueInt( field.countChildren() );
         }
     }
-
-    // Slaves can't perform writes.
-    bool WriteCmd::slaveOk() const { return false; }
 
     bool WriteCmd::isWriteCommandForConfigServer() const { return false; }
 
@@ -111,13 +108,14 @@ namespace mongo {
     // Write commands are counted towards their corresponding opcounters, not command opcounters.
     bool WriteCmd::shouldAffectCommandCounter() const { return false; }
 
-    bool WriteCmd::run(OperationContext* txn,
-                       const string& dbName,
-                       BSONObj& cmdObj,
-                       int options,
-                       string& errMsg,
-                       BSONObjBuilder& result,
-                       bool fromRepl) {
+    bool WriteCmd::runWithWC(OperationContext* txn,
+                             const string& dbName,
+                             BSONObj& cmdObj,
+                             int options,
+                             string& errMsg,
+                             BSONObjBuilder& result,
+                             const WriteConcernOptions& writeConcern,
+                             bool fromRepl) {
 
         // Can't be run on secondaries (logTheOp() == false, slaveOk() == false).
         dassert( !fromRepl );
@@ -136,15 +134,21 @@ namespace mongo {
         NamespaceString nss(dbName, request.getNS());
         request.setNSS(nss);
 
-        WriteConcernOptions defaultWriteConcern =
-            repl::getGlobalReplicationCoordinator()->getGetLastErrorDefault();
-
         WriteBatchExecutor writeBatchExecutor(txn,
-                                              defaultWriteConcern,
                                               &globalOpCounters,
                                               lastError.get());
 
-        writeBatchExecutor.executeBatch( request, &response );
+        writeBatchExecutor.executeBatch(request,
+                                        &response,
+                                        writeConcern);
+
+        //
+        // Don't enforce the write concern if at least one op failed
+        // and the request is ordered.
+        //
+        if (request.getOrdered() && response.isErrDetailsSet()) {
+            ignoreWriteConcernWait();
+        }
 
         result.appendElements( response.toBSON() );
         return response.getOk();
